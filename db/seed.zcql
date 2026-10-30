@@ -1,0 +1,4 @@
+INSERT INTO stores (name_en, name_ta, eta, status, delivery_fee, min_order) VALUES ('Murugan Provision Store', 'முருகன் மளிகை', '30-45 min', 'ACTIVE', 20, 150);
+INSERT INTO stores (name_en, name_ta, eta, status, delivery_fee, min_order) VALUES ('Amman Vegetables', 'அம்மன் காய்கறி', '30-45 min', 'ACTIVE', 20, 100);
+INSERT INTO stores (name_en, name_ta, eta, status, delivery_fee, min_order) VALUES ('Kovai Milk and Dairy', 'கோவை பால் கடை', '20-30 min', 'ACTIVE', 10, 60);
+-- Then add products per store using each store's ROWID (SELECT ROWID, name_en FROM stores).

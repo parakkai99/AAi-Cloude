@@ -1,0 +1,2 @@
+{ "name": "aai_api", "version": "1.0.0", "main": "index.js", "scripts": { "test": "node --test" },
+  "dependencies": { "express": "^4.19.2", "zcatalyst-sdk-node": "^3.0.0" } }
