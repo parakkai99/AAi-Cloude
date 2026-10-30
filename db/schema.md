@@ -1,14 +1,13 @@
-# Data Store schema (Catalyst, Development first)
-Create each table in the console (Cloud Scale > Data Store). ROWID, CREATORID, CREATEDTIME, MODIFIEDTIME are automatic.
-Types: text = Var Char, number = Double, int = Big Int.
+# Data Store schema (AAiHyper project, Development) - ALREADY CREATED
+Created and seeded through the Catalyst connection. Catalyst adds ROWID, CREATORID, CREATEDTIME, MODIFIEDTIME automatically.
+ROWIDs are 17 digits (larger than JS safe integers): always treat them as strings.
 
 | Table | Columns |
 |---|---|
-| companies | name (text), status (text) |
-| stores | name_en, name_ta, company_id, owner_user_id, eta, status (text); delivery_fee, min_order (number) |
-| products | store_id (text), name_en, name_ta, unit, status (text); price (number) |
-| orders | customer_id, store_id, address, slot, payment, status (text); subtotal, delivery_fee, total (number) |
-| order_items | order_id, product_id, name (text); qty, price (number) |
+| stores | name_en, name_ta, owner_user_id, eta, whatsapp, status (varchar); delivery_fee, min_order (double) |
+| products | store_id, name_en, name_ta, unit, status (varchar); price (double) |
+| orders | customer_id, customer_name, customer_phone, store_id, address (255), slot, payment, status (varchar); subtotal, delivery_fee, total (double) |
+| order_items | order_id, product_id, name (varchar); qty, price (double) |
+| quotes | name, phone, store_id, items_text (255), address (255), status (varchar); estimate (double) |
 
-Roles (Authentication > Roles): Customer (default), Vendor, Admin.
-Seed: see db/seed.zcql (run in the ZCQL console after creating tables).
+Seeded: 3 stores, 12 products. Roles to create in Authentication: **Vendor**, **Admin** (everyone else is a customer).

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AAi Hyper | Vendor and Admin</title>
+<style>
+:root{--bg:#f4f7f2;--card:#fff;--ink:#17261d;--mut:#5d6d63;--pri:#1f6b45;--onpri:#fff;--line:#dbe4dc;--soft:#e7f1ea;--bad:#a12622;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1913;--card:#17231c;--ink:#e8f0ea;--mut:#9fb1a5;--pri:#4cc38a;--onpri:#08130d;--line:#2a3a30;--soft:#1d2e24;--bad:#ff8a84;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Tamil",sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+main{max-width:1100px;margin:0 auto;padding:20px}h1,h2{margin:0 0 10px}h2{font-size:18px;margin-top:26px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.kpi b{display:block;font-size:28px;color:var(--pri)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}.wrap{overflow-x:auto}
+button,a.btn{font:inherit;border:0;border-radius:8px;background:var(--pri);color:var(--onpri);padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none;display:inline-block}
+button.alt{background:var(--soft);color:var(--ink);border:1px solid var(--line)}button.bad{background:var(--bad);color:#fff}
+input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-height:40px;margin:2px 4px 2px 0}
+.err{color:var(--bad)}.mut{color:var(--mut)}
+</style></head><body>
+<header><b>AAi Hyper · Portal</b><span id="who" class="mut"></span></header>
+<main id="m"><p class="mut">Loading…</p></main>
+<script>
+const API="/server/aai_api",$=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(p,method,body){const r=await fetch(API+p,{method:method||"GET",credentials:"same-origin",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error((j.error&&j.error.message)||"Error");e.status=r.status;throw e}return j}
+const NEXT={PLACED:"ACCEPTED",ACCEPTED:"PACKED",PACKED:"OUT_FOR_DELIVERY",OUT_FOR_DELIVERY:"DELIVERED"};
+let U=null;
+async function boot(){try{U=await api("/me")}catch(e){$("m").innerHTML=`<div class="card"><h1>Sign in</h1><p>Vendors and admins sign in with their Catalyst account.</p><a class="btn" href="/__catalyst/auth/login">Sign in</a></div>`;return}
+$("who").textContent=U.name+" · "+U.role;
+if(!["Vendor","Admin"].includes(U.role)){$("m").innerHTML=`<div class="card"><h1>No access</h1><p>Your account is a customer account. Ask the admin to give you the Vendor role.</p></div>`;return}
+$("m").innerHTML=(U.role==="Admin"?`<div id="adm"></div>`:"")+`<div id="ven"></div>`;if(U.role==="Admin")await admin();await vendor()}
+async function admin(){const [s,st]=await Promise.all([api("/admin/summary"),api("/admin/stores")]);
+$("adm").innerHTML=`<h1>Admin: company and branches</h1><div class="kpis"><div class="card kpi"><b>${esc(s.stores)}</b>Stores</div><div class="card kpi"><b>${esc(s.orders)}</b>Orders</div><div class="card kpi"><b>${esc(s.quotes)}</b>Quotes</div></div>
+<div class="card wrap"><table><tr><th>Store (branch)</th><th>Status</th><th>Owner user id</th><th>WhatsApp</th><th></th></tr>${st.items.map(x=>`<tr><td>${esc(x.name_en)}<br><span class="mut">id ${esc(x.ROWID)}</span></td><td>${esc(x.status)}</td>
+<td><input data-o="${esc(x.ROWID)}" value="${esc(x.owner_user_id)}" size="14"></td><td><input data-w="${esc(x.ROWID)}" value="${esc((x.whatsapp||"").replace(/^91/,""))}" size="11" inputmode="numeric"></td>
+<td><button data-save="${esc(x.ROWID)}">Save</button> <button class="alt" data-toggle="${esc(x.ROWID)}" data-st="${esc(x.status)}">${x.status==="ACTIVE"?"Pause":"Activate"}</button></td></tr>`).join("")}</table></div>
+<div class="card"><b>Add store</b><br><input id="ns" placeholder="Store name"><input id="nt" placeholder="Tamil name"><input id="nf" placeholder="Delivery fee" inputmode="numeric" size="9"><input id="nm" placeholder="Min order" inputmode="numeric" size="9"><input id="ne" placeholder="ETA e.g. 30-45 min"><button id="nadd">Add store</button> <span id="nmsg" class="err"></span></div>`;
+document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>act(()=>api("/admin/stores/"+b.dataset.save,"PATCH",{owner_user_id:document.querySelector(`[data-o="${b.dataset.save}"]`).value,whatsapp:document.querySelector(`[data-w="${b.dataset.save}"]`).value}),admin));
+document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>act(()=>api("/admin/stores/"+b.dataset.toggle,"PATCH",{status:b.dataset.st==="ACTIVE"?"PAUSED":"ACTIVE"}),admin));
+$("nadd").onclick=()=>act(()=>api("/admin/stores","POST",{name_en:$("ns").value,name_ta:$("nt").value,delivery_fee:$("nf").value,min_order:$("nm").value,eta:$("ne").value}),admin)}
+async function act(fn,then){try{await fn();await then()}catch(e){alert(e.message)}}
+async function vendor(){const [o,q]=await Promise.all([api("/vendor/orders"),api("/vendor/quotes")]);
+$("ven").innerHTML=`<h2>Orders</h2><div class="card wrap">${o.items.length?`<table><tr><th>Order</th><th>Customer</th><th>Total</th><th>Slot / pay</th><th>Status</th><th></th></tr>${o.items.map(x=>`<tr><td>#${esc(String(x.ROWID).slice(-6))}</td><td>${esc(x.customer_name)}<br><a href="tel:${esc(x.customer_phone)}">${esc(x.customer_phone)}</a><br><span class="mut">${esc(x.address)}</span></td><td>₹${esc(x.total)}</td><td>${esc(x.slot)}<br>${esc(x.payment)}</td><td>${esc(x.status)}</td>
+<td>${NEXT[x.status]?`<button data-adv="${esc(x.ROWID)}" data-n="${NEXT[x.status]}">Mark ${esc(NEXT[x.status].replace(/_/g," ").toLowerCase())}</button>`:""} ${x.status==="PLACED"?`<button class="bad" data-adv="${esc(x.ROWID)}" data-n="REJECTED">Reject</button>`:""}</td></tr>`).join("")}</table>`:`<span class="mut">No orders yet.</span>`}</div>
+<h2>Quote requests</h2><div class="card wrap">${q.items.length?`<table><tr><th>Customer</th><th>Request</th><th>Estimate</th><th></th></tr>${q.items.map(x=>`<tr><td>${esc(x.name)}<br>${esc(x.phone)}</td><td style="white-space:pre-wrap">${esc(x.items_text)}</td><td>₹${esc(x.estimate)}</td><td><a class="btn" target="_blank" rel="noopener" href="https://wa.me/91${esc(x.phone)}?text=${encodeURIComponent("Hello "+x.name+", here is your quote from AAi Hyper: ")}">Reply on WhatsApp</a></td></tr>`).join("")}</table>`:`<span class="mut">No quote requests yet.</span>`}</div>
+<h2>Add product</h2><div class="card"><input id="ps" placeholder="Store id" size="20"><input id="pn" placeholder="Product name"><input id="pt" placeholder="Tamil name"><input id="pu" placeholder="Unit (kg)" size="8"><input id="pp" placeholder="Price" size="8" inputmode="decimal"><button id="padd">Add</button></div>`;
+document.querySelectorAll("[data-adv]").forEach(b=>b.onclick=()=>act(()=>api("/vendor/orders/"+b.dataset.adv+"/status","PATCH",{status:b.dataset.n}),vendor));
+$("padd").onclick=()=>act(()=>api("/admin/products","POST",{storeId:$("ps").value,name_en:$("pn").value,name_ta:$("pt").value,unit:$("pu").value,price:$("pp").value}).then(()=>alert("Product added")),vendor)}
+boot();
+</script></body></html>
