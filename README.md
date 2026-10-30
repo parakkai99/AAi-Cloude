@@ -31,3 +31,9 @@ git push -u origin main
 
 ## Status
 Tested: API logic against a mocked Catalyst SDK (4 tests). Not yet tested against the live project or in a browser on a phone.
+
+## Automatic deploy (GitHub Actions)
+1. On your computer, once: `catalyst login`, `catalyst init` (link AAiHyper), then `catalyst token:generate` and copy the token.
+2. Commit the files `catalyst init` created (`catalyst.json`, `.catalystrc`), then push.
+3. GitHub repo > Settings > Secrets and variables > Actions > New secret: name `CATALYST_TOKEN`, value = the token.
+4. Every push to `main` now runs the tests and deploys. Never put the token in the code or in chat. Regenerate it if it leaks.

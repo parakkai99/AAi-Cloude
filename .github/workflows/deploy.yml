@@ -1,0 +1,17 @@
+name: Deploy to Catalyst
+on:
+  push: { branches: [main] }
+  workflow_dispatch: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 18 }
+      - run: npm ci --prefix functions/aai_api
+      - run: npm test --prefix functions/aai_api
+      - run: npm i -g zcatalyst-cli
+      - run: catalyst deploy --token "$CATALYST_TOKEN"
+        env:
+          CATALYST_TOKEN: ${{ secrets.CATALYST_TOKEN }}
