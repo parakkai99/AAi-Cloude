@@ -2,7 +2,12 @@
 const express = require('express');
 const catalyst = require('zcatalyst-sdk-node');
 const app = express();
+app.set('trust proxy', true);
 app.use(express.json({ limit: '100kb' }));
+// Best-effort throttle for public endpoints (instances are ephemeral; real OTP is still recommended).
+const hits = new Map();
+const limited = (key, max, ms) => { const now = Date.now(); const a = (hits.get(key) || []).filter((t) => now - t < ms); a.push(now); hits.set(key, a); if (hits.size > 5000) hits.clear(); return a.length > max; };
+const tooMany = (res) => res.status(429).json({ error: { code: 'RATE_LIMITED', message: 'Too many requests. Please wait a few minutes.' } });
 
 const sdk = (req) => catalyst.initialize(req);
 const zq = (req, q) => sdk(req).zcql().executeZCQLQuery(q);
@@ -65,6 +70,7 @@ app.post('/orders', async (req, res) => {
   if (name.length < 2) return fail(res, 'Enter your name.', 400);
   if (!phone) return fail(res, 'Enter a valid 10-digit mobile number.', 400);
   if (address.length < 5) return fail(res, 'Enter your delivery address.', 400);
+  if (limited('o:' + phone, 5, 600000) || limited('ip:' + req.ip, 60, 600000)) return tooMany(res);
   if (!['cod', 'upi'].includes(b.payment)) return fail(res, 'Choose a payment method.', 400);
   try {
     const st = await storeInfo(req, sid); if (!st) return fail(res, 'Store not found.', 404);
@@ -90,6 +96,7 @@ app.post('/quotes', async (req, res) => {
   const text = clean(b.text, 255), address = clean(b.address, 255);
   if (name.length < 2 || !phone) return fail(res, 'Enter your name and a valid mobile number.', 400);
   if (!text && !(Array.isArray(b.items) && b.items.length)) return fail(res, 'Tell us what you need.', 400);
+  if (limited('q:' + phone, 5, 600000) || limited('ip:' + req.ip, 60, 600000)) return tooMany(res);
   try {
     const sid = idStr(b.storeId) || ''; let estimate = 0;
     if (sid && Array.isArray(b.items) && b.items.length) estimate = (await priceBasket(req, sid, b.items)).subtotal;

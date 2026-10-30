@@ -35,3 +35,9 @@ test('vendor/admin routes need the right role', async () => {
   assert.equal((await post('/vendor/orders/5/status', { status: 'PACKED' }, 'PATCH')).status, 409);   // cannot skip ACCEPTED
   assert.equal((await post('/vendor/orders/5/status', { status: 'ACCEPTED' }, 'PATCH')).status, 200);
 });
+
+test('public checkout is throttled per phone', async () => {
+  const body = { ...good, phone: '9000000001' }; let last;
+  for (let i = 0; i < 7; i++) last = (await post('/orders', body)).status;
+  assert.equal(last, 429);
+});

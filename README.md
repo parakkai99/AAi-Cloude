@@ -30,7 +30,7 @@ git push -u origin main
 - Review the portal sign-in redirect and sign-out link in your Catalyst auth settings.
 
 ## Status
-Tested: API logic against a mocked Catalyst SDK (4 tests). Not yet tested against the live project or in a browser on a phone.
+Tested: API logic against a mocked Catalyst SDK (5 tests, incl. rate limit); storefront and portal run without errors in a simulated browser (jsdom). Not yet tested on the live Catalyst project or a real phone.
 
 ## Automatic deploy (GitHub Actions)
 1. On your computer, once: `catalyst login`, `catalyst init` (link AAiHyper), then `catalyst token:generate` and copy the token.
