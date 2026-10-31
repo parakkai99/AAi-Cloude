@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "83863000000023002",
+      "name": "AAiHyper",
+      "domain": {
+        "id": "50047294993",
+        "name": "aaihyper-60092070503.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60092070503",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}

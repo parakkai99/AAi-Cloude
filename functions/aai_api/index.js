@@ -19,12 +19,16 @@ const fail = (res, e, code = 500) => { if (code === 500) console.error(e); res.s
 
 async function me(req) {
   try { const u = await sdk(req).userManagement().getCurrentUser();
-    return u && { id: String(u.user_id), name: u.first_name || '', role: (u.role_details && u.role_details.role_name) || 'Customer' }; }
+    if (!u) return null;
+    const rn = (u.role_details && u.role_details.role_name) || '';
+    return { id: String(u.user_id), name: u.first_name || '', role: rn === 'App Administrator' || rn === 'Admin' ? 'Admin' : rn === 'Vendor' ? 'Vendor' : 'Customer' }; }
   catch (e) { return null; }
 }
+async function ownsStore(req, id) { const r = await zq(req, `SELECT ROWID FROM stores WHERE owner_user_id = '${String(id).replace(/\D/g, '')}'`); return r.length > 0; }
 const need = (roles) => async (req, res, next) => {
   const u = await me(req);
   if (!u) return res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Please sign in.' } });
+  if (u.role === 'Customer') { try { if (await ownsStore(req, u.id)) u.role = 'Vendor'; } catch (e) { /* stay Customer */ } }
   if (roles && !roles.includes(u.role)) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have access.' } });
   req.u = u; next();
 };
@@ -109,9 +113,10 @@ app.post('/quotes', async (req, res) => {
 const FLOW = ['PLACED', 'ACCEPTED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 async function myStore(req) { const r = await zq(req, `SELECT ROWID FROM stores WHERE owner_user_id = '${req.u.id}'`); return r.length ? String(r[0].stores.ROWID) : null; }
 app.get('/vendor/orders', need(['Vendor', 'Admin']), async (req, res) => {
-  try { const sid = req.u.role === 'Admin' && idStr(req.query.storeId) ? idStr(req.query.storeId) : await myStore(req);
-    if (!sid) return res.json({ items: [] });
-    const rows = await zq(req, `SELECT ROWID, customer_name, customer_phone, total, status, slot, address, payment, CREATEDTIME FROM orders WHERE store_id = '${sid}' ORDER BY CREATEDTIME DESC LIMIT 100`);
+  try { const sid = req.u.role === 'Admin' ? idStr(req.query.storeId) : await myStore(req);   // admin without storeId sees all stores
+    if (req.u.role !== 'Admin' && !sid) return res.json({ items: [] });
+    const where = sid ? `WHERE store_id = '${sid}'` : '';
+    const rows = await zq(req, `SELECT ROWID, store_id, customer_name, customer_phone, total, status, slot, address, payment, CREATEDTIME FROM orders ${where} ORDER BY CREATEDTIME DESC LIMIT 100`);
     res.json({ items: rows.map((r) => r.orders) }); } catch (e) { fail(res, e); }
 });
 app.patch('/vendor/orders/:id/status', need(['Vendor', 'Admin']), async (req, res) => {

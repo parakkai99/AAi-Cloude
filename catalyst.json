@@ -1,0 +1,10 @@
+   {
+     "functions": {
+       "targets": ["aai_api"],
+       "ignore": [],
+       "source": "functions"
+     },
+     "client": {
+       "source": "client"
+     }
+   }

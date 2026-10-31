@@ -3,7 +3,7 @@ const test = require('node:test'); const assert = require('node:assert'); const 
 const inserted = { orders: [], order_items: [], quotes: [] }; let user = null;
 const PRODUCTS = [{ products: { ROWID: '111', name_en: 'Rice', price: '62' } }, { products: { ROWID: '112', name_en: 'Sugar', price: '46' } }];
 const mock = { initialize: () => ({
-  zcql: () => ({ executeZCQLQuery: async (q) => /FROM products/.test(q) ? PRODUCTS : /FROM stores WHERE ROWID/.test(q) ? [{ stores: { ROWID: '9', delivery_fee: '20', min_order: '100' } }] : /FROM stores WHERE owner/.test(q) ? [{ stores: { ROWID: '9' } }] : /FROM orders WHERE ROWID/.test(q) ? [{ orders: { ROWID: '5', status: 'PLACED', store_id: '9' } }] : [] }),
+  zcql: () => ({ executeZCQLQuery: async (q) => /FROM products/.test(q) ? PRODUCTS : /FROM stores WHERE ROWID/.test(q) ? [{ stores: { ROWID: '9', delivery_fee: '20', min_order: '100' } }] : /FROM stores WHERE owner_user_id = '2'/.test(q) ? [{ stores: { ROWID: '9' } }] : /FROM stores WHERE owner/.test(q) ? [] : /FROM orders WHERE ROWID/.test(q) ? [{ orders: { ROWID: '5', status: 'PLACED', store_id: '9' } }] : [] }),
   datastore: () => ({ table: (t) => ({ insertRow: async (r) => { inserted[t].push(r); return { ROWID: '777' }; }, insertRows: async (r) => { inserted[t].push(...r); }, updateRow: async () => ({}) }) }),
   userManagement: () => ({ getCurrentUser: async () => { if (!user) throw new Error('no'); return user; } }) }) };
 const orig = Module._load; Module._load = function (r, ...a) { return r === 'zcatalyst-sdk-node' ? mock : orig.call(this, r, ...a); };
@@ -40,4 +40,13 @@ test('public checkout is throttled per phone', async () => {
   const body = { ...good, phone: '9000000001' }; let last;
   for (let i = 0; i < 7; i++) last = (await post('/orders', body)).status;
   assert.equal(last, 429);
+});
+
+test('Catalyst App Administrator is admin; store owner is vendor', async () => {
+  user = { user_id: '5', first_name: 'A', role_details: { role_name: 'App Administrator' } };
+  assert.equal((await (await fetch(base + '/me')).json()).role, 'Admin');
+  user = { user_id: '2', first_name: 'V', role_details: { role_name: 'App User' } };
+  assert.equal((await (await fetch(base + '/me')).json()).role, 'Vendor');
+  user = { user_id: '3', first_name: 'C', role_details: { role_name: 'App User' } };
+  assert.equal((await (await fetch(base + '/me')).json()).role, 'Customer');
 });
